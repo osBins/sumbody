@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm Institutional Theme */
+    --background: 30 5% 96%;          /* #F5F5F4 Pale Pearl/Bone / stone-100 */
+    --foreground: 24 10% 10%;         /* #292524 Deep Espresso / stone-800 */
+    --card: 0 0% 100%;                /* #FFFFFF Pure White */
+    --card-foreground: 24 10% 10%;    /* stone-800 */
+    --popover: 0 0% 100%;
+    --popover-foreground: 24 10% 10%;
+    --primary: 350 78% 36%;           /* #A0182E Deep Crimson */
+    --primary-foreground: 0 0% 100%;  /* White text on crimson */
+    --secondary: 30 6% 90%;           /* #E7E5E4 stone-200 */
+    --secondary-foreground: 24 10% 10%;
+    --muted: 30 5% 94%;               /* Warm muted background */
+    --muted-foreground: 24 6% 45%;    /* Muted warm gray text */
+    --accent: 350 100% 97%;           /* #FFF1F2 Very Pale Rose / rose-50 */
+    --accent-foreground: 24 10% 10%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 30 6% 83%;              /* #D6D3D1 Warm Sand / stone-300 */
+    --input: 30 6% 83%;
+    --ring: 350 78% 36%;              /* Crimson focus ring */
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}

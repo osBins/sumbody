@@ -141,3 +141,12 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+.kiro
+.vscode
+
+*.xlsx
+
+# Rust build output
+target/
+src-tauri/target/
