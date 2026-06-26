@@ -26,7 +26,7 @@ export function Dashboard() {
   const { filters, setFilter, resetFilters, applyFilters } = useFilters();
   const filteredMembers = applyFilters(members, filters);
   const { query, setQuery, results: displayMembers } = useFuzzySearch(filteredMembers);
-  const { isImporting, progress, result: importResult, importFile } = useImport(refetch);
+  const { isImporting, progress, result: importResult, pending, prepareImport, confirmImport, cancelImport } = useImport(refetch);
 
   // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -118,7 +118,7 @@ export function Dashboard() {
       <div className="flex flex-col flex-1 overflow-hidden" style={{ zoom: `${zoom}%` }}>
         {/* ImportDropZone area */}
         <div className="px-6 pt-4">
-          <ImportDropZone onFileDrop={importFile} disabled={isImporting} />
+          <ImportDropZone onFileDrop={prepareImport} disabled={isImporting} />
           <div className="mt-3">
             <ImportProgress
               isImporting={isImporting}
@@ -218,6 +218,42 @@ export function Dashboard() {
           name={deleteTarget.name}
           onConfirm={handleDeleteConfirm}
         />
+      )}
+
+      {/* Import Confirmation Dialog */}
+      {pending && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
+            <h3 className="text-lg font-semibold mb-2">Confirm Import</h3>
+            <p className="text-sm text-muted-foreground mb-4">
+              File: <span className="font-medium text-foreground">{pending.file.name}</span>
+            </p>
+            <div className="space-y-1 text-sm mb-6">
+              <p><span className="font-medium">{pending.parseResult.valid.length}</span> valid records found</p>
+              <p className="text-green-600"><span className="font-medium">{pending.newCount}</span> new records will be added</p>
+              {pending.updateCount > 0 && (
+                <p className="text-amber-600"><span className="font-medium">{pending.updateCount}</span> existing records will be overwritten</p>
+              )}
+              {pending.parseResult.skipped > 0 && (
+                <p className="text-muted-foreground"><span className="font-medium">{pending.parseResult.skipped}</span> rows will be skipped (missing Member No.)</p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={cancelImport}
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmImport}
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+              >
+                Import {pending.parseResult.valid.length} Records
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

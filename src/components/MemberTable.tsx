@@ -1,13 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Trash2, Pencil, Check } from "lucide-react";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableRow,
-  TableHead,
-  TableCell,
-} from "@/components/ui/table";
 import { SCHEMA_FIELDS, FIELD_LABELS } from "@/lib/schema";
 import { formatDate } from "@/lib/utils";
 import { EditableCell } from "@/components/EditableCell";
@@ -26,12 +19,14 @@ const LINK_FIELDS: Record<string, "mailto" | "tel"> = {
   MOBILENO: "tel",
 };
 
+const ROW_HEIGHT = 40;
+
 interface ContextMenuState {
   x: number;
   y: number;
   memberno: string;
   name: string;
-  field?: string; // If right-clicked on a specific cell
+  field?: string;
 }
 
 export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
@@ -39,6 +34,14 @@ export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [editingCell, setEditingCell] = useState<{ memberno: string; field: string } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: members.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => ROW_HEIGHT,
+    overscan: 10,
+  });
 
   const handleCellSave = (memberno: string, field: string, newValue: string) => {
     const member = members.find((m) => m.MEMBERNO === memberno);
@@ -49,7 +52,6 @@ export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
       [field]: field === "TOTALDUES" ? parseFloat(newValue) || 0 : newValue,
     };
     onUpdate(memberno, updatedRecord);
-    // Clear single-cell editing after save
     setEditingCell(null);
   };
 
@@ -65,7 +67,6 @@ export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
     setContextMenu({ x: e.clientX, y: e.clientY, memberno, name, field });
   }, []);
 
-  // Close context menu on click outside or Escape
   useEffect(() => {
     const handleClick = () => setContextMenu(null);
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -83,87 +84,113 @@ export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
     return editingRow === memberno || (editingCell?.memberno === memberno && editingCell?.field === field);
   };
 
+  if (members.length === 0) {
+    return (
+      <div className="flex items-center justify-center h-24 text-muted-foreground">
+        No members to display.
+      </div>
+    );
+  }
+
   return (
-    <div className="overflow-x-auto rounded-md border relative">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="whitespace-nowrap w-[80px] sticky left-0 z-10 bg-[hsl(var(--card))] border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]">Actions</TableHead>
-            {SCHEMA_FIELDS.map((field) => (
-              <TableHead key={field} className="whitespace-nowrap">
-                {FIELD_LABELS[field]}
-              </TableHead>
-            ))}
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {members.length === 0 ? (
-            <TableRow>
-              <TableCell
-                colSpan={SCHEMA_FIELDS.length + 1}
-                className="h-24 text-center text-muted-foreground"
-              >
-                No members to display.
-              </TableCell>
-            </TableRow>
-          ) : (
-            members.map((member) => {
-              const isRowEditing = editingRow === member.MEMBERNO;
-              return (
-                <TableRow key={member.MEMBERNO} className={`${isRowEditing ? "bg-muted/30" : "even:bg-muted/30"}`}>
-                  <TableCell className="whitespace-nowrap sticky left-0 z-10 bg-[hsl(var(--card))] border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]">
-                    <div className="flex items-center gap-1">
-                      {isRowEditing ? (
+    <div className="rounded-md border relative flex flex-col h-full">
+      {/* Fixed header */}
+      <div className="overflow-x-auto shrink-0 border-b">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-card">
+              <th className="h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap w-[80px] sticky left-0 z-10 bg-[hsl(var(--card))] border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]">
+                Actions
+              </th>
+              {SCHEMA_FIELDS.map((field) => (
+                <th key={field} className="h-10 px-2 text-left align-middle font-medium text-muted-foreground whitespace-nowrap">
+                  {FIELD_LABELS[field]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+        </table>
+      </div>
+
+      {/* Virtualized scrollable body */}
+      <div ref={parentRef} className="flex-1 overflow-auto">
+        <div
+          style={{ height: `${rowVirtualizer.getTotalSize()}px`, position: "relative" }}
+        >
+          <table className="w-full text-sm" style={{ tableLayout: "auto" }}>
+            <tbody>
+              {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                const member = members[virtualRow.index];
+                const isRowEditing = editingRow === member.MEMBERNO;
+                const isEven = virtualRow.index % 2 === 0;
+
+                return (
+                  <tr
+                    key={member.MEMBERNO}
+                    className={`border-b transition-colors ${isRowEditing ? "bg-muted/30" : isEven ? "" : "bg-muted/20"}`}
+                    style={{
+                      height: `${ROW_HEIGHT}px`,
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      width: "100%",
+                      transform: `translateY(${virtualRow.start}px)`,
+                    }}
+                  >
+                    <td className="p-2 align-middle whitespace-nowrap w-[80px] sticky left-0 z-10 bg-[hsl(var(--card))] border-r border-border shadow-[2px_0_4px_-2px_rgba(0,0,0,0.06)]">
+                      <div className="flex items-center gap-1">
+                        {isRowEditing ? (
+                          <button
+                            onClick={() => setEditingRow(null)}
+                            className="inline-flex items-center justify-center rounded-md p-1.5 text-green-600 hover:bg-green-100 transition-colors"
+                            aria-label="Done editing"
+                            title="Done editing"
+                          >
+                            <Check className="h-4 w-4" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => setEditingRow(member.MEMBERNO)}
+                            className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                            aria-label={`Edit member ${member.NAME}`}
+                            title="Edit row"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                        )}
                         <button
-                          onClick={() => setEditingRow(null)}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-green-600 hover:bg-green-100 transition-colors"
-                          aria-label="Done editing"
-                          title="Done editing"
+                          onClick={() => onDelete(member.MEMBERNO, member.NAME)}
+                          className="inline-flex items-center justify-center rounded-md p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
+                          aria-label={`Delete member ${member.NAME}`}
+                          title="Delete"
                         >
-                          <Check className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                      ) : (
-                        <button
-                          onClick={() => setEditingRow(member.MEMBERNO)}
-                          className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                          aria-label={`Edit member ${member.NAME}`}
-                          title="Edit row"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => onDelete(member.MEMBERNO, member.NAME)}
-                        className="inline-flex items-center justify-center rounded-md p-1.5 text-destructive hover:bg-destructive/10 transition-colors"
-                        aria-label={`Delete member ${member.NAME}`}
-                        title="Delete"
+                      </div>
+                    </td>
+                    {SCHEMA_FIELDS.map((field) => (
+                      <td
+                        key={field}
+                        className="p-2 align-middle whitespace-nowrap max-w-[200px] [contain:content]"
+                        onContextMenu={(e) => handleContextMenu(e, member.MEMBERNO, member.NAME, field)}
                       >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </TableCell>
-                  {SCHEMA_FIELDS.map((field) => (
-                    <TableCell
-                      key={field}
-                      className="whitespace-nowrap max-w-[200px] [contain:content]"
-                      onContextMenu={(e) => handleContextMenu(e, member.MEMBERNO, member.NAME, field)}
-                    >
-                      <EditableCell
-                        value={formatCellValue(field, member[field])}
-                        field={field}
-                        memberno={member.MEMBERNO}
-                        onSave={handleCellSave}
-                        linkType={LINK_FIELDS[field]}
-                        editable={isCellEditable(member.MEMBERNO, field)}
-                      />
-                    </TableCell>
-                  ))}
-                </TableRow>
-              );
-            })
-          )}
-        </TableBody>
-      </Table>
+                        <EditableCell
+                          value={formatCellValue(field, member[field])}
+                          field={field}
+                          memberno={member.MEMBERNO}
+                          onSave={handleCellSave}
+                          linkType={LINK_FIELDS[field]}
+                          editable={isCellEditable(member.MEMBERNO, field)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Context Menu */}
       {contextMenu && (

@@ -1,71 +1,113 @@
 import { useState, useCallback } from "react";
 import type { ImportResult } from "@/types/member";
 import { parseImportFile, type ParseResult } from "@/lib/file-parser";
-import { importMembers } from "@/lib/tauri-commands";
+import { importMembers, getAllMembers } from "@/lib/tauri-commands";
+
+export interface PendingImport {
+  file: File;
+  parseResult: ParseResult;
+  newCount: number;
+  updateCount: number;
+}
 
 export function useImport(onSuccess?: () => void) {
   const [isImporting, setIsImporting] = useState(false);
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState<ImportResult | null>(null);
+  const [pending, setPending] = useState<PendingImport | null>(null);
 
-  const importFile = useCallback(
+  // Step 1: Parse file and compute what will happen (without importing)
+  const prepareImport = useCallback(
     async (file: File) => {
-      setIsImporting(true);
-      setProgress(0);
       setResult(null);
 
       try {
-        // Step 1: Parse the file (CSV or XLSX)
         const parseResult: ParseResult = await parseImportFile(file);
 
-        // If there are no valid records, return early with only skipped info
         if (parseResult.valid.length === 0) {
+          // Nothing to import — show result immediately
           const emptyResult: ImportResult = {
             imported: 0,
             skipped: parseResult.skipped,
             updated: 0,
-            errors: parseResult.errors,
+            errors: parseResult.errors.length > 0
+              ? parseResult.errors
+              : ["No valid records found in file"],
           };
           setResult(emptyResult);
-          setProgress(100);
-          return emptyResult;
+          return;
         }
 
-        // Step 2: Send all valid records to the backend in one batch
-        const backendResult = await importMembers(parseResult.valid);
+        // Check how many records already exist in DB
+        const existingMembers = await getAllMembers();
+        const existingIds = new Set(existingMembers.map((m) => m.MEMBERNO));
 
-        // Step 3: Combine parse-level skipped info with backend result
-        const finalResult: ImportResult = {
-          imported: backendResult.imported,
-          skipped: parseResult.skipped + backendResult.skipped,
-          updated: backendResult.updated,
-          errors: [...parseResult.errors, ...backendResult.errors],
-        };
+        let newCount = 0;
+        let updateCount = 0;
+        for (const record of parseResult.valid) {
+          if (existingIds.has(record.MEMBERNO)) {
+            updateCount++;
+          } else {
+            newCount++;
+          }
+        }
 
-        setResult(finalResult);
-        setProgress(100);
-
-        // Notify caller of successful import so they can refetch members
-        onSuccess?.();
-
-        return finalResult;
+        setPending({ file, parseResult, newCount, updateCount });
       } catch (error) {
         const errorMessage =
-          error instanceof Error ? error.message : "Import failed";
-        const errorResult: ImportResult = {
+          error instanceof Error ? error.message : "Failed to parse file";
+        setResult({
           imported: 0,
           skipped: 0,
           updated: 0,
           errors: [errorMessage],
-        };
-        setResult(errorResult);
-        return errorResult;
-      } finally {
-        setIsImporting(false);
+        });
       }
     },
-    [onSuccess]
+    []
   );
 
-  return { isImporting, progress, result, importFile };
+  // Step 2: User confirms → actually run the import
+  const confirmImport = useCallback(async () => {
+    if (!pending) return;
+
+    setIsImporting(true);
+    setProgress(0);
+    setPending(null);
+
+    try {
+      const backendResult = await importMembers(pending.parseResult.valid);
+
+      const finalResult: ImportResult = {
+        imported: backendResult.imported,
+        skipped: pending.parseResult.skipped + backendResult.skipped,
+        updated: backendResult.updated,
+        errors: [...pending.parseResult.errors, ...backendResult.errors],
+      };
+
+      setResult(finalResult);
+      setProgress(100);
+      onSuccess?.();
+
+      return finalResult;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Import failed";
+      setResult({
+        imported: 0,
+        skipped: 0,
+        updated: 0,
+        errors: [errorMessage],
+      });
+    } finally {
+      setIsImporting(false);
+    }
+  }, [pending, onSuccess]);
+
+  // User cancels the pending import
+  const cancelImport = useCallback(() => {
+    setPending(null);
+  }, []);
+
+  return { isImporting, progress, result, pending, prepareImport, confirmImport, cancelImport };
 }

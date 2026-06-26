@@ -1,1 +1,1 @@
-// SQL query constants - implementation in later tasks
+// Reserved for future SQL query constants
