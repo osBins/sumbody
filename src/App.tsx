@@ -25,13 +25,10 @@ function App() {
             title: "Update available",
             description: `Version ${update.version} is available. Restart the app after downloading.`,
           });
-          // Download and install in background
           update.downloadAndInstall();
         }
       })
-      .catch(() => {
-        // Silently fail — no internet or no update endpoint yet
-      });
+      .catch(() => {});
   }, [initialized]);
 
   if (error) {

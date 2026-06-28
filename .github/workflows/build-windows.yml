@@ -47,19 +47,21 @@ jobs:
       - name: Generate latest.json for updater
         run: |
           $version = node -p "require('./src-tauri/tauri.conf.json').version"
-          $sig = Get-Content "src-tauri/target/release/bundle/nsis/*.nsis.zip.sig" -ErrorAction SilentlyContinue
+          $sigFile = Get-ChildItem "src-tauri/target/release/bundle/nsis/*.nsis.zip.sig" -ErrorAction SilentlyContinue | Select-Object -First 1
+          $sig = if ($sigFile) { Get-Content $sigFile.FullName -Raw } else { "" }
           $json = @{
             version = "v$version"
             notes = "Update to v$version"
             pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
             platforms = @{
               "windows-x86_64" = @{
-                signature = if ($sig) { $sig } else { "" }
+                signature = $sig.Trim()
                 url = "https://github.com/osbins/sumbody/releases/download/v$version/SumBody_${version}_x64-setup.nsis.zip"
               }
             }
           }
           $json | ConvertTo-Json -Depth 4 | Out-File -FilePath latest.json -Encoding utf8
+          Write-Host "Signature: $($sig.Substring(0, [Math]::Min(50, $sig.Length)))..."
 
       - name: Upload latest.json to release
         uses: softprops/action-gh-release@v2
