@@ -36,7 +36,7 @@ export const FIELD_LABELS: Record<keyof MemberRecord, string> = {
   MEMBERNO: "Member No.",
   MEMBERSHIPDATE: "Membership Date",
   MEMCAT: "Category",
-  SAL: "Salutation",
+  SAL: "Sal.",
   NAME: "Name",
   DOB: "DOB",
   AQUALI: "Qualification",

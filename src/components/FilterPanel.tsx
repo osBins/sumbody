@@ -116,10 +116,18 @@ export function FilterPanel({ filters, setFilter, resetFilters, members }: Filte
         onChange={(v) => setFilter("SAL", v)}
       />
       <DateRangeFilter
+        label="Membership Date"
         startValue={filters.membershipDateStart}
         endValue={filters.membershipDateEnd}
         onStartChange={(v) => setFilter("membershipDateStart", v)}
         onEndChange={(v) => setFilter("membershipDateEnd", v)}
+      />
+      <DateRangeFilter
+        label="Date of Birth"
+        startValue={filters.dobStart}
+        endValue={filters.dobEnd}
+        onStartChange={(v) => setFilter("dobStart", v)}
+        onEndChange={(v) => setFilter("dobEnd", v)}
       />
       <button
         type="button"

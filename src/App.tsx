@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
+import { check } from "@tauri-apps/plugin-updater";
 import { initDatabase } from "@/lib/tauri-commands";
 import { Dashboard } from "@/components/Dashboard";
 import { Toaster } from "@/components/ui/toaster";
+import { toast } from "@/components/ui/use-toast";
 
 function App() {
   const [initialized, setInitialized] = useState(false);
@@ -12,6 +14,25 @@ function App() {
       .then(() => setInitialized(true))
       .catch((err: Error) => setError(err.message));
   }, []);
+
+  // Check for updates silently on launch
+  useEffect(() => {
+    if (!initialized) return;
+    check()
+      .then((update) => {
+        if (update) {
+          toast({
+            title: "Update available",
+            description: `Version ${update.version} is available. Restart the app after downloading.`,
+          });
+          // Download and install in background
+          update.downloadAndInstall();
+        }
+      })
+      .catch(() => {
+        // Silently fail — no internet or no update endpoint yet
+      });
+  }, [initialized]);
 
   if (error) {
     return (

@@ -9,6 +9,9 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,6 +38,31 @@ jobs:
           name: sumbody v${{ steps.version.outputs.version }}
           files: |
             src-tauri/target/release/bundle/nsis/*.exe
+            src-tauri/target/release/bundle/nsis/*.nsis.zip
+            src-tauri/target/release/bundle/nsis/*.nsis.zip.sig
             src-tauri/target/release/sumbody.exe
           draft: false
           prerelease: false
+
+      - name: Generate latest.json for updater
+        run: |
+          $version = node -p "require('./src-tauri/tauri.conf.json').version"
+          $sig = Get-Content "src-tauri/target/release/bundle/nsis/*.nsis.zip.sig" -ErrorAction SilentlyContinue
+          $json = @{
+            version = "v$version"
+            notes = "Update to v$version"
+            pub_date = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ")
+            platforms = @{
+              "windows-x86_64" = @{
+                signature = if ($sig) { $sig } else { "" }
+                url = "https://github.com/osbins/sumbody/releases/download/v$version/SumBody_${version}_x64-setup.nsis.zip"
+              }
+            }
+          }
+          $json | ConvertTo-Json -Depth 4 | Out-File -FilePath latest.json -Encoding utf8
+
+      - name: Upload latest.json to release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          files: latest.json

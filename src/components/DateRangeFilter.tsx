@@ -1,4 +1,5 @@
 interface DateRangeFilterProps {
+  label?: string;
   startValue: string;
   endValue: string;
   onStartChange: (value: string) => void;
@@ -6,6 +7,7 @@ interface DateRangeFilterProps {
 }
 
 export function DateRangeFilter({
+  label = "Date Range",
   startValue,
   endValue,
   onStartChange,
@@ -14,7 +16,7 @@ export function DateRangeFilter({
   return (
     <div className="space-y-1">
       <label className="text-xs font-medium text-muted-foreground">
-        Membership Date Range
+        {label}
       </label>
       <div className="space-y-2">
         <div className="relative">

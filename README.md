@@ -1,23 +1,28 @@
 # sumbody
 
-A desktop app for managing memberships. Import, filter, search, edit, and export member data.
+A lightweight desktop app for managing membership records. Import, filter, search, edit, and export member data.
 
 ## Features
 
-- **Import**: Drag-and-drop or browse for `.xlsx` / `.csv` files
-- **Filter**: Multi-select dropdowns for city, state, category, qualification, region, salutation — with OR logic
-- **Search**: Fuzzy search across name and location fields
-- **Edit**: Right-click a cell or use the row edit button
-- **Export**: One-click CSV export of the current filtered view
-- **Offline**: All data stored locally in SQLite — no internet required
+- Import `.xlsx` / `.csv` via drag-and-drop or file picker
+- Multi-select filters with OR logic (city, state, category, qualification, region, salutation)
+- Fuzzy search across name and location
+- Inline edit via row edit button or right-click context menu
+- CSV export of filtered view
+- Email All (To/Cc/Bcc) to filtered members
+- WhatsApp per member with compose dialog
+- Birthday tray on launch
+- Virtualized table — handles 10,000+ records
+- Auto-updater via GitHub Releases
+- Offline — SQLite, no internet needed (except update checks)
 
 ## Install
 
-Download the latest `.exe` installer from [Releases](../../releases).
+Download from [Releases](../../releases):
+- `SumBody_x.x.x_x64-setup.exe` — installer (recommended, auto-updates)
+- `sumbody.exe` — portable (Windows 10 21H2+ with WebView2)
 
-## Dev Setup
-
-Requires: Node.js 20+, Rust (via rustup)
+## Dev
 
 ```bash
 npm install
@@ -30,11 +35,10 @@ npm run tauri dev
 npm run tauri build
 ```
 
-Or trigger the GitHub Actions workflow for a Windows `.exe`.
+## Stack
 
-## Tech Stack
-
-Tauri 2 · React · TypeScript · TailwindCSS · Shadcn UI · SQLite · PapaParse · SheetJS · Fuse.js
+Tauri 2 · React · TypeScript · TailwindCSS · Shadcn UI · SQLite · PapaParse · SheetJS · Fuse.js · @tanstack/react-virtual
 
 ---
-Built for pitaji 🧔‍♂️.
+
+Built for pitaji 👨

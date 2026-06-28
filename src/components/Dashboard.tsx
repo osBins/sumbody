@@ -11,9 +11,11 @@ import { FilterPanel } from "@/components/FilterPanel";
 import { SearchBar } from "@/components/SearchBar";
 import { ImportDropZone } from "@/components/ImportDropZone";
 import { ImportProgress } from "@/components/ImportProgress";
+import { BirthdayTray } from "@/components/BirthdayTray";
 import { AddMemberDialog } from "@/components/AddMemberDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ExportButton } from "@/components/ExportButton";
+import { EmailAllButton } from "@/components/EmailAllButton";
 import { DbPathDisplay } from "@/components/DbPathDisplay";
 import { ZoomIn, ZoomOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import type { MemberRecord } from "@/types/member";
@@ -92,6 +94,23 @@ export function Dashboard() {
             Add Member
           </button>
           <ExportButton members={displayMembers} />
+          <EmailAllButton members={displayMembers} />
+          <button
+            type="button"
+            onClick={() => {
+              const numbers = displayMembers
+                .map((m) => m.MOBILENO)
+                .filter(Boolean)
+                .join(", ");
+              navigator.clipboard.writeText(numbers);
+              toast({ title: "Copied", description: `${displayMembers.filter((m) => m.MOBILENO).length} mobile numbers copied to clipboard` });
+            }}
+            disabled={displayMembers.length === 0}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
+            title="Copy all mobile numbers from current view"
+          >
+            Copy Numbers
+          </button>
           <div className="flex items-center gap-1 ml-2 border-l pl-2">
             <button
               onClick={zoomOut}
@@ -126,6 +145,17 @@ export function Dashboard() {
               result={importResult}
             />
           </div>
+          <div className="mt-3">
+            <BirthdayTray members={members} />
+          </div>
+          {/* Visible filter result count */}
+          {displayMembers.length !== members.length && (
+            <div className="mt-3 flex items-center gap-2 text-sm">
+              <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
+                Showing {displayMembers.length} of {members.length} members
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Main content area: filter panel + table */}

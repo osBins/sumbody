@@ -1,6 +1,6 @@
 {
   "productName": "SumBody",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "identifier": "com.sumbody.app",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -39,6 +39,14 @@
         "installerIcon": "icons/icon.ico",
         "displayLanguageSelector": false
       }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "endpoints": [
+        "https://github.com/osbins/sumbody/releases/latest/download/latest.json"
+      ],
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDI2N0UxQUZDMDJFMUI2NkIKUldScnR1RUMvQnArSm0rU0REU0NwZHpxTnVBc2hZRnluRUR4cFB6NzdpM1phNi9LeUMraXo2b0kK"
     }
   }
 }

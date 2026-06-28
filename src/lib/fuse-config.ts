@@ -3,7 +3,7 @@ import { MemberRecord } from "@/types/member";
 
 export const fuseOptions: IFuseOptions<MemberRecord> = {
   keys: ["NAME", "RCITY", "PCITY", "RSTATE", "PSTATE"],
-  threshold: 0.2,        // Stricter — requires closer matches
+  threshold: 0.15,        // Very strict — requires very close matches
   distance: 100,
   includeScore: true,
   shouldSort: true,

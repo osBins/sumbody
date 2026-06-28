@@ -42,6 +42,8 @@ export interface FilterState {
   SAL: string[];
   membershipDateStart: string;
   membershipDateEnd: string;
+  dobStart: string;
+  dobEnd: string;
 }
 
 export interface ImportResult {

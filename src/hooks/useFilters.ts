@@ -14,6 +14,8 @@ const initialFilterState: FilterState = {
   SAL: [],
   membershipDateStart: "",
   membershipDateEnd: "",
+  dobStart: "",
+  dobEnd: "",
 };
 
 export function applyFilters(
@@ -51,12 +53,27 @@ export function applyFilters(
       if (!hasMatch) return false;
     }
 
-    // Date range filter
+    // Date range filter — data stored as MM/DD/YYYY
     if (filters.membershipDateStart || filters.membershipDateEnd) {
-      const date = new Date(m.MEMBERSHIPDATE);
-      if (filters.membershipDateStart && date < new Date(filters.membershipDateStart))
+      const parts = m.MEMBERSHIPDATE.split("/");
+      if (parts.length !== 3) return false;
+      const memberDate = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+      if (isNaN(memberDate.getTime())) return false;
+      if (filters.membershipDateStart && memberDate < new Date(filters.membershipDateStart))
         return false;
-      if (filters.membershipDateEnd && date > new Date(filters.membershipDateEnd))
+      if (filters.membershipDateEnd && memberDate > new Date(filters.membershipDateEnd))
+        return false;
+    }
+
+    // DOB range filter — data stored as MM/DD/YYYY
+    if (filters.dobStart || filters.dobEnd) {
+      const parts = m.DOB.split("/");
+      if (parts.length !== 3) return false;
+      const dobDate = new Date(parseInt(parts[2]), parseInt(parts[0]) - 1, parseInt(parts[1]));
+      if (isNaN(dobDate.getTime())) return false;
+      if (filters.dobStart && dobDate < new Date(filters.dobStart))
+        return false;
+      if (filters.dobEnd && dobDate > new Date(filters.dobEnd))
         return false;
     }
 

@@ -96,7 +96,7 @@ export function EditableCell({ value, field, memberno, onSave, linkType, editabl
     return (
       <span
         onClick={() => setIsEditing(true)}
-        className="cursor-pointer truncate block max-w-[180px] min-w-[40px] px-1 py-0.5 rounded hover:bg-muted border border-transparent hover:border-input"
+        className="cursor-pointer truncate block max-w-[180px] min-w-[40px] px-1 py-0.5 rounded hover:bg-muted border border-transparent hover:border-input font-normal"
         title="Click to edit"
       >
         {value || "\u00A0"}
@@ -107,7 +107,7 @@ export function EditableCell({ value, field, memberno, onSave, linkType, editabl
   // Read-only mode: show full value on hover via title
   return (
     <span
-      className="truncate block max-w-[180px] min-w-[40px] px-1 py-0.5 select-all"
+      className="truncate block max-w-[180px] min-w-[40px] px-1 py-0.5 font-normal"
       title={value}
     >
       {value || "\u00A0"}
