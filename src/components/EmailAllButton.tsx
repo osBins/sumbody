@@ -46,9 +46,6 @@ export function EmailAllButton({ members }: EmailAllButtonProps) {
     }
 
     const params: string[] = [];
-    if (mode === "to" && (subject || body)) {
-      // Already have emailList in the to: field, add subject/body as params
-    }
     if (subject) params.push(`subject=${encodeURIComponent(subject)}`);
     if (body) params.push(`body=${encodeURIComponent(body)}`);
 
@@ -131,10 +128,41 @@ export function EmailAllButton({ members }: EmailAllButtonProps) {
                 />
               </div>
             </div>
-            <div className="flex justify-end gap-2 mt-4">
+            <div className="flex flex-wrap justify-end gap-2 mt-4">
+              <button
+                onClick={() => { navigator.clipboard.writeText(emails.join(", ")); }}
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                title="Copy all email addresses to clipboard"
+              >
+                Copy Emails
+              </button>
+              <button
+                onClick={() => {
+                  const gmailUrl = `https://mail.google.com/mail/?view=cm&${mode}=${encodeURIComponent(emails.join(","))}&su=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                  open(gmailUrl);
+                  setComposeOpen(false);
+                  setSubject("");
+                  setBody("");
+                }}
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Gmail
+              </button>
+              <button
+                onClick={() => {
+                  const yahooUrl = `https://compose.mail.yahoo.com/?${mode}=${encodeURIComponent(emails.join(","))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+                  open(yahooUrl);
+                  setComposeOpen(false);
+                  setSubject("");
+                  setBody("");
+                }}
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+              >
+                Yahoo
+              </button>
               <button
                 onClick={() => { setComposeOpen(false); setSubject(""); setBody(""); }}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
+                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
               >
                 Cancel
               </button>
@@ -142,7 +170,7 @@ export function EmailAllButton({ members }: EmailAllButtonProps) {
                 onClick={handleSend}
                 className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
               >
-                Open Email Client
+                Email Client
               </button>
             </div>
           </div>

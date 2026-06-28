@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
+import type { DragEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { updateMember } from "@/lib/tauri-commands";
@@ -9,54 +10,81 @@ import { useImport } from "@/hooks/useImport";
 import { MemberTable } from "@/components/MemberTable";
 import { FilterPanel } from "@/components/FilterPanel";
 import { SearchBar } from "@/components/SearchBar";
-import { ImportDropZone } from "@/components/ImportDropZone";
 import { ImportProgress } from "@/components/ImportProgress";
 import { BirthdayTray } from "@/components/BirthdayTray";
 import { AddMemberDialog } from "@/components/AddMemberDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ExportButton } from "@/components/ExportButton";
 import { EmailAllButton } from "@/components/EmailAllButton";
-import { DbPathDisplay } from "@/components/DbPathDisplay";
-import { ZoomIn, ZoomOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { ZoomIn, ZoomOut, PanelLeftClose, PanelLeftOpen, Upload } from "lucide-react";
 import type { MemberRecord } from "@/types/member";
 
 const ZOOM_LEVELS = [75, 80, 90, 100, 110, 125, 150];
 
 export function Dashboard() {
-  // Data hooks
   const { members, loading, refetch } = useMembers();
   const { filters, setFilter, resetFilters, applyFilters } = useFilters();
   const filteredMembers = applyFilters(members, filters);
   const { query, setQuery, results: displayMembers } = useFuzzySearch(filteredMembers);
   const { isImporting, progress, result: importResult, pending, prepareImport, confirmImport, cancelImport } = useImport(refetch);
 
-  // Dialog state
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ memberno: string; name: string } | null>(null);
-
-  // Zoom state
   const [zoomIndex, setZoomIndex] = useState(ZOOM_LEVELS.indexOf(100));
   const zoom = ZOOM_LEVELS[zoomIndex];
-
-  // Filter panel collapse state
   const [filterOpen, setFilterOpen] = useState(true);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [scrollToMemberno, setScrollToMemberno] = useState<string | null>(null);
+  const [scrollTrigger, setScrollTrigger] = useState(0);
+
+  const handleScrollToMember = (memberno: string) => {
+    setScrollToMemberno(memberno);
+    setScrollTrigger((t) => t + 1);
+  };
 
   const zoomIn = () => setZoomIndex((i) => Math.min(i + 1, ZOOM_LEVELS.length - 1));
   const zoomOut = () => setZoomIndex((i) => Math.max(i - 1, 0));
 
-  // Handle inline edit with duplicate MEMBERNO check and error handling
+  // File input ref for Import button
+  const handleImportClick = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = ".xlsx,.xls,.csv";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (file) prepareImport(file);
+    };
+    input.click();
+  };
+
+  // Global drag-and-drop handlers
+  const handleDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+  }, []);
+
+  const handleDrop = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) prepareImport(file);
+  }, [prepareImport]);
+
   const handleUpdate = async (memberno: string, record: MemberRecord) => {
     try {
       await updateMember(memberno, record);
       await refetch();
     } catch (err) {
       const message = err instanceof Error ? err.message : "An unknown error occurred";
-      toast({
-        variant: "destructive",
-        title: "Update failed",
-        description: message,
-      });
-      // Refetch to revert cell value to the original database state
+      toast({ variant: "destructive", title: "Update failed", description: message });
       await refetch();
     }
   };
@@ -71,10 +99,26 @@ export function Dashboard() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-background text-foreground">
+    <div
+      className="flex flex-col h-screen bg-background text-foreground relative"
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {/* Full-screen drag overlay */}
+      {isDragOver && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center bg-primary/5 border-4 border-dashed border-primary rounded-lg pointer-events-none">
+          <div className="flex flex-col items-center gap-2 text-primary">
+            <Upload className="h-12 w-12" />
+            <span className="text-lg font-medium">Drop file to import</span>
+          </div>
+        </div>
+      )}
+
       {/* Accent strip */}
       <div className="h-1 bg-[hsl(var(--primary))]" />
-      {/* Top Toolbar: SearchBar, AddMember button, ExportButton */}
+
+      {/* Top Toolbar */}
       <header className="flex items-center gap-2 md:gap-4 border-b px-4 md:px-6 py-3 flex-wrap bg-card">
         <h1 className="text-xl font-bold whitespace-nowrap text-[hsl(var(--primary))]">sumbody</h1>
         <span className="text-sm text-muted-foreground whitespace-nowrap">
@@ -88,20 +132,20 @@ export function Dashboard() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setAddDialogOpen(true)}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            onClick={handleImportClick}
+            disabled={isImporting}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 py-2 bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors disabled:opacity-50"
+            title="Import .xlsx or .csv file"
           >
-            Add Member
+            <Upload className="h-4 w-4 mr-1.5" />
+            Import
           </button>
           <ExportButton members={displayMembers} />
           <EmailAllButton members={displayMembers} />
           <button
             type="button"
             onClick={() => {
-              const numbers = displayMembers
-                .map((m) => m.MOBILENO)
-                .filter(Boolean)
-                .join(", ");
+              const numbers = displayMembers.map((m) => m.MOBILENO).filter(Boolean).join(", ");
               navigator.clipboard.writeText(numbers);
               toast({ title: "Copied", description: `${displayMembers.filter((m) => m.MOBILENO).length} mobile numbers copied to clipboard` });
             }}
@@ -111,22 +155,20 @@ export function Dashboard() {
           >
             Copy Numbers
           </button>
+          <button
+            type="button"
+            onClick={() => setAddDialogOpen(true)}
+            className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            title="Add new member"
+          >
+            +
+          </button>
           <div className="flex items-center gap-1 ml-2 border-l pl-2">
-            <button
-              onClick={zoomOut}
-              disabled={zoomIndex === 0}
-              className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
-              title="Zoom out"
-            >
+            <button onClick={zoomOut} disabled={zoomIndex === 0} className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30" title="Zoom out">
               <ZoomOut className="h-4 w-4" />
             </button>
             <span className="text-xs text-muted-foreground w-8 text-center">{zoom}%</span>
-            <button
-              onClick={zoomIn}
-              disabled={zoomIndex === ZOOM_LEVELS.length - 1}
-              className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30"
-              title="Zoom in"
-            >
+            <button onClick={zoomIn} disabled={zoomIndex === ZOOM_LEVELS.length - 1} className="inline-flex items-center justify-center rounded-md p-1.5 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors disabled:opacity-30" title="Zoom in">
               <ZoomIn className="h-4 w-4" />
             </button>
           </div>
@@ -135,22 +177,12 @@ export function Dashboard() {
 
       {/* Zoomable content area */}
       <div className="flex flex-col flex-1 overflow-hidden" style={{ zoom: `${zoom}%` }}>
-        {/* ImportDropZone area */}
-        <div className="px-6 pt-4">
-          <ImportDropZone onFileDrop={prepareImport} disabled={isImporting} />
-          <div className="mt-3">
-            <ImportProgress
-              isImporting={isImporting}
-              progress={progress}
-              result={importResult}
-            />
-          </div>
-          <div className="mt-3">
-            <BirthdayTray members={members} />
-          </div>
-          {/* Visible filter result count */}
+        {/* Import progress + Birthday */}
+        <div className="px-6 pt-2 space-y-2">
+          <ImportProgress isImporting={isImporting} progress={progress} result={importResult} />
+          <BirthdayTray members={members} onScrollToMember={handleScrollToMember} />
           {displayMembers.length !== members.length && (
-            <div className="mt-3 flex items-center gap-2 text-sm">
+            <div className="flex items-center gap-2 text-sm">
               <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
                 Showing {displayMembers.length} of {members.length} members
               </span>
@@ -159,53 +191,31 @@ export function Dashboard() {
         </div>
 
         {/* Main content area: filter panel + table */}
-        <div className="flex flex-1 overflow-hidden px-6 py-4 gap-4">
-          {/* Filter Panel Toggle Button (when collapsed) */}
+        <div className="flex flex-1 overflow-hidden px-6 py-3 gap-4">
           {!filterOpen && (
-            <button
-              type="button"
-              onClick={() => setFilterOpen(true)}
-              className="shrink-0 inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors self-start"
-              title="Show filters"
-            >
+            <button type="button" onClick={() => setFilterOpen(true)} className="shrink-0 inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors self-start" title="Show filters">
               <PanelLeftOpen className="h-5 w-5" />
             </button>
           )}
 
-          {/* Filter Panel (collapsible sidebar) */}
-          <aside
-            className={`shrink-0 overflow-hidden transition-all duration-300 ease-in-out ${
-              filterOpen ? "w-56 lg:w-64 opacity-100" : "w-0 opacity-0"
-            }`}
-          >
+          <aside className={`shrink-0 overflow-hidden ${filterOpen ? "w-56 lg:w-64" : "w-0"}`}>
             <div className="w-56 lg:w-64 h-full overflow-y-auto">
               <Card className="min-h-full">
                 <CardHeader className="pb-3 sticky top-0 z-10 bg-[hsl(350,100%,97%)] border-b border-border rounded-t-lg">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base">Filters</CardTitle>
-                    <button
-                      type="button"
-                      onClick={() => setFilterOpen(false)}
-                      className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                      title="Hide filters"
-                    >
+                    <button type="button" onClick={() => setFilterOpen(false)} className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Hide filters">
                       <PanelLeftClose className="h-4 w-4" />
                     </button>
                   </div>
                 </CardHeader>
                 <CardContent className="pb-6">
-                  <FilterPanel
-                    filters={filters}
-                    setFilter={setFilter}
-                    resetFilters={resetFilters}
-                    members={members}
-                  />
+                  <FilterPanel filters={filters} setFilter={setFilter} resetFilters={resetFilters} members={members} />
                 </CardContent>
               </Card>
             </div>
           </aside>
 
-          {/* Main Table Area */}
           <main className="flex-1 overflow-auto">
             <Card className="h-full">
               <CardContent className="p-0 h-full overflow-auto">
@@ -217,29 +227,16 @@ export function Dashboard() {
                     </div>
                   </div>
                 ) : (
-                  <MemberTable
-                    members={displayMembers}
-                    onDelete={handleDelete}
-                    onUpdate={handleUpdate}
-                  />
+                  <MemberTable members={displayMembers} onDelete={handleDelete} onUpdate={handleUpdate} scrollToMemberno={scrollToMemberno} scrollTrigger={scrollTrigger} />
                 )}
               </CardContent>
             </Card>
           </main>
         </div>
-      </div>{/* end zoomable content */}
-
-      {/* Footer: DbPathDisplay */}
-      <footer className="border-t px-6 py-2 text-xs text-muted-foreground">
-        <DbPathDisplay />
-      </footer>
+      </div>
 
       {/* Dialogs */}
-      <AddMemberDialog
-        open={addDialogOpen}
-        onOpenChange={setAddDialogOpen}
-        onSuccess={refetch}
-      />
+      <AddMemberDialog open={addDialogOpen} onOpenChange={setAddDialogOpen} onSuccess={refetch} />
       {deleteTarget && (
         <DeleteConfirmDialog
           open={!!deleteTarget}
@@ -269,16 +266,10 @@ export function Dashboard() {
               )}
             </div>
             <div className="flex justify-end gap-2">
-              <button
-                onClick={cancelImport}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors"
-              >
+              <button onClick={cancelImport} className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors">
                 Cancel
               </button>
-              <button
-                onClick={confirmImport}
-                className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
-              >
+              <button onClick={confirmImport} className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-4 py-2 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors">
                 Import {pending.parseResult.valid.length} Records
               </button>
             </div>

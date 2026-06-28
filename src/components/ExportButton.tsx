@@ -42,6 +42,7 @@ export function ExportButton({ members, disabled }: ExportButtonProps) {
       onClick={handleExport}
       disabled={isDisabled || exporting}
       title={members.length === 0 ? "No data to export" : "Export filtered view to CSV"}
+      className="bg-primary/10 text-primary border-primary/30 hover:bg-primary/20"
     >
       <Download className="h-4 w-4 mr-2" />
       {exporting ? "Exporting…" : "Export CSV"}

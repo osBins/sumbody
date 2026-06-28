@@ -1,16 +1,20 @@
 import { useMemo, useState } from "react";
-import { Cake, ChevronDown, ChevronUp } from "lucide-react";
+import { Cake, MessageCircle, Mail } from "lucide-react";
+import { open } from "@tauri-apps/plugin-shell";
 import { parseDate } from "@/lib/utils";
+import { WhatsAppDialog } from "@/components/WhatsAppDialog";
 import type { MemberRecord } from "@/types/member";
 
 interface BirthdayTrayProps {
   members: MemberRecord[];
+  onScrollToMember?: (memberno: string) => void;
 }
 
-const SHOW_INLINE = 3; // Show this many names inline before collapsing
+const SHOW_INLINE = 3;
 
-export function BirthdayTray({ members }: BirthdayTrayProps) {
+export function BirthdayTray({ members, onScrollToMember }: BirthdayTrayProps) {
   const [expanded, setExpanded] = useState(false);
+  const [whatsappTarget, setWhatsappTarget] = useState<{ name: string; mobile: string } | null>(null);
 
   const birthdayMembers = useMemo(() => {
     const today = new Date();
@@ -33,37 +37,92 @@ export function BirthdayTray({ members }: BirthdayTrayProps) {
   const remainingCount = birthdayMembers.length - SHOW_INLINE;
 
   return (
-    <div className="rounded-lg border border-primary/20 bg-accent px-4 py-2">
-      <div className="flex items-center gap-2">
-        <Cake className="h-4 w-4 text-primary shrink-0" />
-        <span className="text-sm font-medium text-primary">
-          Today's birthdays ({birthdayMembers.length}):
-        </span>
-        <span className="text-sm text-foreground truncate">
-          {inlineNames.join(", ")}
-          {remainingCount > 0 && !expanded && (
-            <span className="text-muted-foreground"> +{remainingCount} more</span>
+    <>
+      <div className="rounded-lg border border-primary/20 bg-accent px-4 py-2">
+        <div className="flex items-center gap-2">
+          <Cake className="h-4 w-4 text-primary shrink-0" />
+          <span className="text-sm font-medium text-primary">
+            Today's birthdays ({birthdayMembers.length}):
+          </span>
+          <span className="text-sm text-foreground truncate">
+            {inlineNames.join(", ")}
+            {remainingCount > 0 && !expanded && (
+              <span className="text-muted-foreground"> +{remainingCount} more</span>
+            )}
+          </span>
+          {birthdayMembers.length > SHOW_INLINE && !expanded && (
+            <span className="text-muted-foreground text-sm"> +{remainingCount} more</span>
           )}
-        </span>
-        {birthdayMembers.length > SHOW_INLINE && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="shrink-0 inline-flex items-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-            title={expanded ? "Collapse" : "Show all"}
-          >
-            {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-          </button>
+          {/* Actions */}
+          <div className="ml-auto flex items-center gap-1 shrink-0">
+            {expanded ? (
+              <button
+                onClick={() => setExpanded(false)}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-muted-foreground hover:bg-muted transition-colors"
+              >
+                ✕ Close
+              </button>
+            ) : (
+              <button
+                onClick={() => setExpanded(true)}
+                className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+              >
+                🎉 Wish them!
+              </button>
+            )}
+          </div>
+        </div>
+        {expanded && (
+          <div className="mt-2 pl-6 text-sm text-foreground max-h-[150px] overflow-y-auto space-y-1">
+            {birthdayMembers.map((m) => (
+              <div key={m.MEMBERNO} className="flex items-center gap-2">
+                <button
+                  onClick={() => onScrollToMember?.(m.MEMBERNO)}
+                  className="text-left hover:text-primary hover:underline transition-colors"
+                >
+                  {m.NAME || "Unknown"} ({m.MEMBERNO})
+                </button>
+                {m.MOBILENO && (
+                  <button
+                    onClick={() => setWhatsappTarget({ name: m.NAME, mobile: m.MOBILENO })}
+                    className="inline-flex items-center rounded p-0.5 text-green-600 hover:bg-green-100 transition-colors"
+                    title={`WhatsApp ${m.NAME}`}
+                  >
+                    <MessageCircle className="h-3 w-3" />
+                  </button>
+                )}
+                {m.MOBILENO && (
+                  <button
+                    onClick={() => open(`tel:${m.MOBILENO}`)}
+                    className="inline-flex items-center rounded p-0.5 text-muted-foreground hover:bg-muted transition-colors"
+                    title={`Call ${m.NAME}`}
+                  >
+                    📞
+                  </button>
+                )}
+                {m.EMAIL && (
+                  <button
+                    onClick={() => open(`mailto:${m.EMAIL}?subject=${encodeURIComponent("Happy Birthday!")}`)}
+                    className="inline-flex items-center rounded p-0.5 text-blue-600 hover:bg-blue-100 transition-colors"
+                    title={`Email ${m.NAME}`}
+                  >
+                    <Mail className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         )}
       </div>
-      {expanded && birthdayMembers.length > SHOW_INLINE && (
-        <div className="mt-2 pl-6 text-sm text-foreground max-h-[120px] overflow-y-auto space-y-0.5">
-          {birthdayMembers.map((m) => (
-            <div key={m.MEMBERNO}>
-              {m.NAME || "Unknown"} ({m.MEMBERNO})
-            </div>
-          ))}
-        </div>
+
+      {whatsappTarget && (
+        <WhatsAppDialog
+          open={!!whatsappTarget}
+          onOpenChange={(isOpen) => { if (!isOpen) setWhatsappTarget(null); }}
+          name={whatsappTarget.name}
+          mobile={whatsappTarget.mobile}
+        />
       )}
-    </div>
+    </>
   );
 }

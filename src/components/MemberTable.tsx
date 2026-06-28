@@ -12,6 +12,8 @@ interface MemberTableProps {
   members: MemberRecord[];
   onDelete: (memberno: string, name: string) => void;
   onUpdate: (memberno: string, record: MemberRecord) => void;
+  scrollToMemberno?: string | null;
+  scrollTrigger?: number;
 }
 
 const DATE_FIELDS = new Set(["MEMBERSHIPDATE", "DOB"]);
@@ -66,11 +68,12 @@ interface ContextMenuState {
   field?: string;
 }
 
-export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
+export function MemberTable({ members, onDelete, onUpdate, scrollToMemberno, scrollTrigger }: MemberTableProps) {
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const [editingCell, setEditingCell] = useState<{ memberno: string; field: string } | null>(null);
   const [whatsappTarget, setWhatsappTarget] = useState<{ name: string; mobile: string } | null>(null);
+  const [highlightedRow, setHighlightedRow] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +83,18 @@ export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
     estimateSize: () => ROW_HEIGHT,
     overscan: 20,
   });
+
+  // Scroll to a specific member when requested
+  useEffect(() => {
+    if (!scrollToMemberno) return;
+    const index = members.findIndex((m) => m.MEMBERNO === scrollToMemberno);
+    if (index >= 0) {
+      rowVirtualizer.scrollToIndex(index, { align: "center" });
+      setHighlightedRow(scrollToMemberno);
+      const timer = setTimeout(() => setHighlightedRow(null), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [scrollToMemberno, scrollTrigger, members, rowVirtualizer]);
 
   const handleCellSave = (memberno: string, field: string, newValue: string) => {
     const member = members.find((m) => m.MEMBERNO === memberno);
@@ -156,7 +171,7 @@ export function MemberTable({ members, onDelete, onUpdate }: MemberTableProps) {
               return (
                 <div
                   key={member.MEMBERNO}
-                  className={`flex border-b border-border/40 hover:bg-muted/40 transition-colors ${isRowEditing ? "bg-muted/30" : isEven ? "bg-card" : "bg-accent/30"}`}
+                  className={`flex border-b border-border/40 hover:bg-muted/40 transition-colors ${highlightedRow === member.MEMBERNO ? "bg-primary/10 ring-1 ring-primary/30" : isRowEditing ? "bg-muted/30" : isEven ? "bg-card" : "bg-accent/50"}`}
                   style={{
                     height: `${ROW_HEIGHT}px`,
                     position: "absolute",

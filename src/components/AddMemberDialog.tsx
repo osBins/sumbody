@@ -114,7 +114,7 @@ export function AddMemberDialog({
                 </label>
                 <input
                   id={`add-member-${field}`}
-                  type={field === "TOTALDUES" ? "number" : "text"}
+                  type={field === "TOTALDUES" ? "number" : field === "DOB" || field === "MEMBERSHIPDATE" ? "date" : "text"}
                   step={field === "TOTALDUES" ? "0.01" : undefined}
                   value={
                     field === "TOTALDUES"
