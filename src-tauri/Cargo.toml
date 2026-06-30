@@ -1,6 +1,6 @@
 [package]
 name = "sumbody"
-version = "0.5.0"
+version = "1.1.0"
 description = "SumBody Members Management App"
 authors = ["you"]
 edition = "2021"

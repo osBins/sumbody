@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo } from "react";
 import type { DragEvent } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
 import { updateMember, deleteMember } from "@/lib/tauri-commands";
 import { useMembers } from "@/hooks/useMembers";
