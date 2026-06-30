@@ -102,7 +102,7 @@ export function BirthdayTray({ members, onScrollToMember }: BirthdayTrayProps) {
                 )}
                 {m.EMAIL && (
                   <button
-                    onClick={() => open(`mailto:${m.EMAIL}?subject=${encodeURIComponent("Happy Birthday!")}`)}
+                    onClick={() => open(`mailto:${m.EMAIL}?subject=${encodeURIComponent("Happy Birthday!")}&body=${encodeURIComponent(`Dear CMA ${m.NAME} ji,\n\n`)}`)}
                     className="inline-flex items-center rounded p-0.5 text-blue-600 hover:bg-blue-100 transition-colors"
                     title={`Email ${m.NAME}`}
                   >

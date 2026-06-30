@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import type { MemberRecord, FilterState } from "@/types/member";
 import { FilterInput } from "./FilterInput";
 import { MultiSelectFilter } from "./MultiSelectFilter";
@@ -14,6 +14,39 @@ interface FilterPanelProps {
 function uniqueSorted(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))].sort((a, b) =>
     a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+}
+
+function FilterSection({ title, children, defaultOpen = true }: { title: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="inline-flex items-center gap-1.5 w-full text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground transition-colors py-1.5"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          className="h-3 w-3 shrink-0"
+          style={{ marginTop: "1px" }}
+        >
+          {open ? (
+            <polyline points="6 9 12 15 18 9" />
+          ) : (
+            <polyline points="9 6 15 12 9 18" />
+          )}
+        </svg>
+        {title}
+      </button>
+      {open && <div className="space-y-3 mt-2">{children}</div>}
+    </div>
   );
 }
 
@@ -56,79 +89,101 @@ export function FilterPanel({ filters, setFilter, resetFilters, members }: Filte
   }, [members]);
 
   return (
-    <div className="space-y-3">
-      <FilterInput
-        label="Telephone"
-        value={filters.TELEPHONE}
-        onChange={(v) => setFilter("TELEPHONE", v)}
-      />
-      <FilterInput
-        label="Email"
-        value={filters.EMAIL}
-        onChange={(v) => setFilter("EMAIL", v)}
-      />
-      <MultiSelectFilter
-        label="Residential City"
-        options={options.RCITY}
-        selected={filters.RCITY}
-        onChange={(v) => setFilter("RCITY", v)}
-      />
-      <MultiSelectFilter
-        label="Professional City"
-        options={options.PCITY}
-        selected={filters.PCITY}
-        onChange={(v) => setFilter("PCITY", v)}
-      />
-      <MultiSelectFilter
-        label="Residential State"
-        options={options.RSTATE}
-        selected={filters.RSTATE}
-        onChange={(v) => setFilter("RSTATE", v)}
-      />
-      <MultiSelectFilter
-        label="Professional State"
-        options={options.PSTATE}
-        selected={filters.PSTATE}
-        onChange={(v) => setFilter("PSTATE", v)}
-      />
-      <MultiSelectFilter
-        label="Qualification"
-        options={options.AQUALI}
-        selected={filters.AQUALI}
-        onChange={(v) => setFilter("AQUALI", v)}
-      />
-      <MultiSelectFilter
-        label="Member Category"
-        options={options.MEMCAT}
-        selected={filters.MEMCAT}
-        onChange={(v) => setFilter("MEMCAT", v)}
-      />
-      <MultiSelectFilter
-        label="Region"
-        options={options.REGIONNAME}
-        selected={filters.REGIONNAME}
-        onChange={(v) => setFilter("REGIONNAME", v)}
-      />
-      <MultiSelectFilter
-        label="Salutation"
-        options={options.SAL}
-        selected={filters.SAL}
-        onChange={(v) => setFilter("SAL", v)}
-      />
-      <DateRangeFilter
-        label="Membership Date"
-        startValue={filters.membershipDateStart}
-        endValue={filters.membershipDateEnd}
-        onStartChange={(v) => setFilter("membershipDateStart", v)}
-        onEndChange={(v) => setFilter("membershipDateEnd", v)}
-      />
-      <DateRangeFilter
-        label="Date of Birth"
-        startValue={filters.dobStart}
-        endValue={filters.dobEnd}
-        onStartChange={(v) => setFilter("dobStart", v)}
-        onEndChange={(v) => setFilter("dobEnd", v)}
-      />
+    <div className="space-y-4">
+      <FilterSection title="Contact">
+        <FilterInput
+          label="Telephone"
+          value={filters.TELEPHONE}
+          onChange={(v) => setFilter("TELEPHONE", v)}
+        />
+        <FilterInput
+          label="Email"
+          value={filters.EMAIL}
+          onChange={(v) => setFilter("EMAIL", v)}
+        />
+      </FilterSection>
+
+      <FilterSection title="Location">
+        <MultiSelectFilter
+          label="Residential City"
+          options={options.RCITY}
+          selected={filters.RCITY}
+          onChange={(v) => setFilter("RCITY", v)}
+        />
+        <MultiSelectFilter
+          label="Professional City"
+          options={options.PCITY}
+          selected={filters.PCITY}
+          onChange={(v) => setFilter("PCITY", v)}
+        />
+        <MultiSelectFilter
+          label="Residential State"
+          options={options.RSTATE}
+          selected={filters.RSTATE}
+          onChange={(v) => setFilter("RSTATE", v)}
+        />
+        <MultiSelectFilter
+          label="Professional State"
+          options={options.PSTATE}
+          selected={filters.PSTATE}
+          onChange={(v) => setFilter("PSTATE", v)}
+        />
+        <FilterInput
+          label="Residential Pincode"
+          value={filters.RPIN}
+          onChange={(v) => setFilter("RPIN", v)}
+        />
+        <FilterInput
+          label="Professional Pincode"
+          value={filters.PPIN}
+          onChange={(v) => setFilter("PPIN", v)}
+        />
+        <MultiSelectFilter
+          label="Region"
+          options={options.REGIONNAME}
+          selected={filters.REGIONNAME}
+          onChange={(v) => setFilter("REGIONNAME", v)}
+        />
+      </FilterSection>
+
+      <FilterSection title="Member Info">
+        <MultiSelectFilter
+          label="Qualification"
+          options={options.AQUALI}
+          selected={filters.AQUALI}
+          onChange={(v) => setFilter("AQUALI", v)}
+        />
+        <MultiSelectFilter
+          label="Member Category"
+          options={options.MEMCAT}
+          selected={filters.MEMCAT}
+          onChange={(v) => setFilter("MEMCAT", v)}
+        />
+        <MultiSelectFilter
+          label="Salutation"
+          options={options.SAL}
+          selected={filters.SAL}
+          onChange={(v) => setFilter("SAL", v)}
+        />
+      </FilterSection>
+
+      <FilterSection title="Dates" defaultOpen={false}>
+        <DateRangeFilter
+          label="Membership Date"
+          startValue={filters.membershipDateStart}
+          endValue={filters.membershipDateEnd}
+          onStartChange={(v) => setFilter("membershipDateStart", v)}
+          onEndChange={(v) => setFilter("membershipDateEnd", v)}
+        />
+        <DateRangeFilter
+          label="Date of Birth"
+          startValue={filters.dobStart}
+          endValue={filters.dobEnd}
+          onStartChange={(v) => setFilter("dobStart", v)}
+          onEndChange={(v) => setFilter("dobEnd", v)}
+        />
+      </FilterSection>
+
       <button
         type="button"
         onClick={resetFilters}

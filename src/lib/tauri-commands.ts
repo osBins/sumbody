@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { MemberRecord, ImportResult } from "@/types/member";
+import type { MemberRecord, ImportResult, CallLog } from "@/types/member";
 
 /**
  * Transforms a Tauri invoke error into a consistent Error object.
@@ -88,6 +88,67 @@ export async function createMember(record: MemberRecord): Promise<void> {
 export async function deleteMember(memberno: string): Promise<void> {
   try {
     await invoke("delete_member", { memberno });
+  } catch (err) {
+    throw toError(err);
+  }
+}
+
+/**
+ * Adds a new call log entry.
+ */
+export async function addCallLog(
+  memberno: string,
+  call_date: string,
+  call_time: string,
+  call_type: string,
+  summary: string
+): Promise<void> {
+  try {
+    await invoke("add_call_log", { memberno, callDate: call_date, callTime: call_time, callType: call_type, summary });
+  } catch (err) {
+    throw toError(err);
+  }
+}
+
+/**
+ * Fetches all call logs, ordered by date descending.
+ */
+export async function getCallLogs(): Promise<CallLog[]> {
+  try {
+    return await invoke<CallLog[]>("get_call_logs");
+  } catch (err) {
+    throw toError(err);
+  }
+}
+
+/**
+ * Fetches call logs for a single member.
+ */
+export async function getMemberCallLogs(memberno: string): Promise<CallLog[]> {
+  try {
+    return await invoke<CallLog[]>("get_member_call_logs", { memberno });
+  } catch (err) {
+    throw toError(err);
+  }
+}
+
+/**
+ * Fetches the most recent call log for a member.
+ */
+export async function getLastCall(memberno: string): Promise<CallLog | null> {
+  try {
+    return await invoke<CallLog | null>("get_last_call", { memberno });
+  } catch (err) {
+    throw toError(err);
+  }
+}
+
+/**
+ * Deletes a call log entry by ID.
+ */
+export async function deleteCallLog(id: number): Promise<void> {
+  try {
+    await invoke("delete_call_log", { id });
   } catch (err) {
     throw toError(err);
   }

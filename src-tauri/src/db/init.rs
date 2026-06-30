@@ -36,13 +36,34 @@ CREATE TABLE IF NOT EXISTS members (
 );
 "#;
 
-/// Returns the migration that creates the members table.
+/// SQL statement to create the call_logs table.
+pub const CREATE_CALL_LOGS_TABLE: &str = r#"
+CREATE TABLE IF NOT EXISTS call_logs (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  memberno TEXT NOT NULL,
+  call_date TEXT NOT NULL,
+  call_time TEXT DEFAULT '',
+  call_type TEXT DEFAULT 'outbound',
+  summary TEXT DEFAULT '',
+  created_at TEXT DEFAULT (datetime('now'))
+);
+"#;
+
+/// Returns the migrations for the database.
 /// This should be passed to the `tauri-plugin-sql` builder via `.add_migrations()`.
 pub fn get_migrations() -> Vec<Migration> {
-    vec![Migration {
-        version: 1,
-        description: "create_members_table",
-        sql: CREATE_MEMBERS_TABLE,
-        kind: MigrationKind::Up,
-    }]
+    vec![
+        Migration {
+            version: 1,
+            description: "create_members_table",
+            sql: CREATE_MEMBERS_TABLE,
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 2,
+            description: "create_call_logs_table",
+            sql: CREATE_CALL_LOGS_TABLE,
+            kind: MigrationKind::Up,
+        },
+    ]
 }

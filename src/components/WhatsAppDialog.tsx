@@ -25,7 +25,7 @@ function formatIndianNumber(mobile: string): string {
 }
 
 export function WhatsAppDialog({ open: isOpen, onOpenChange, name, mobile }: WhatsAppDialogProps) {
-  const [message, setMessage] = useState("");
+  const [message, setMessage] = useState(`CMA ${name} ji, `);
 
   if (!isOpen) return null;
 
@@ -47,8 +47,15 @@ export function WhatsAppDialog({ open: isOpen, onOpenChange, name, mobile }: Wha
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={handleClose}>
+      <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg relative" onClick={(e) => e.stopPropagation()}>
+        <button
+          onClick={handleClose}
+          className="absolute top-4 right-4 inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+          title="Close"
+        >
+          <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
         <h3 className="text-lg font-semibold mb-1">WhatsApp Message</h3>
         <p className="text-sm text-muted-foreground mb-4">
           To: <span className="font-medium text-foreground">{name}</span>

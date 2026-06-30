@@ -21,6 +21,11 @@ pub fn run() {
             commands::members::update_member,
             commands::members::create_member,
             commands::members::delete_member,
+            commands::call_logs::add_call_log,
+            commands::call_logs::get_call_logs,
+            commands::call_logs::get_member_call_logs,
+            commands::call_logs::get_last_call,
+            commands::call_logs::delete_call_log,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

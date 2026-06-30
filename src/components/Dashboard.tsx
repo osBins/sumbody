@@ -1,9 +1,10 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import type { DragEvent } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "@/components/ui/use-toast";
-import { updateMember } from "@/lib/tauri-commands";
+import { updateMember, deleteMember } from "@/lib/tauri-commands";
 import { useMembers } from "@/hooks/useMembers";
+import { useCallLogs } from "@/hooks/useCallLogs";
 import { useFilters } from "@/hooks/useFilters";
 import { useFuzzySearch } from "@/hooks/useFuzzySearch";
 import { useImport } from "@/hooks/useImport";
@@ -16,13 +17,15 @@ import { AddMemberDialog } from "@/components/AddMemberDialog";
 import { DeleteConfirmDialog } from "@/components/DeleteConfirmDialog";
 import { ExportButton } from "@/components/ExportButton";
 import { EmailAllButton } from "@/components/EmailAllButton";
-import { ZoomIn, ZoomOut, PanelLeftClose, PanelLeftOpen, Upload } from "lucide-react";
+import { CallLogInline } from "@/components/CallHistoryPanel";
+import { ZoomIn, ZoomOut, PanelLeftClose, Upload, Phone, Users, Filter } from "lucide-react";
 import type { MemberRecord } from "@/types/member";
 
 const ZOOM_LEVELS = [75, 80, 90, 100, 110, 125, 150];
 
 export function Dashboard() {
   const { members, loading, refetch } = useMembers();
+  const { lastCallMap, refetch: refetchCallLogs } = useCallLogs();
   const { filters, setFilter, resetFilters, applyFilters } = useFilters();
   const filteredMembers = applyFilters(members, filters);
   const { query, setQuery, results: displayMembers } = useFuzzySearch(filteredMembers);
@@ -36,6 +39,16 @@ export function Dashboard() {
   const [isDragOver, setIsDragOver] = useState(false);
   const [scrollToMemberno, setScrollToMemberno] = useState<string | null>(null);
   const [scrollTrigger, setScrollTrigger] = useState(0);
+  const [activeTab, setActiveTab] = useState<"members" | "callLog">("members");
+
+  // Build a map of memberno -> member name for use in CallHistoryPanel
+  const memberNames = useMemo(() => {
+    const map: Record<string, string> = {};
+    for (const m of members) {
+      map[m.MEMBERNO] = m.NAME || m.MEMBERNO;
+    }
+    return map;
+  }, [members]);
 
   const handleScrollToMember = (memberno: string) => {
     setScrollToMemberno(memberno);
@@ -93,6 +106,21 @@ export function Dashboard() {
     setDeleteTarget({ memberno, name });
   };
 
+  const handleBulkDelete = async (membernos: string[]) => {
+    if (!confirm(`Delete ${membernos.length} selected members? This cannot be undone.`)) return;
+    try {
+      for (const memberno of membernos) {
+        await deleteMember(memberno);
+      }
+      toast({ title: "Deleted", description: `${membernos.length} members deleted.` });
+      await refetch();
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "An unknown error occurred";
+      toast({ variant: "destructive", title: "Delete failed", description: message });
+      await refetch();
+    }
+  };
+
   const handleDeleteConfirm = () => {
     setDeleteTarget(null);
     refetch();
@@ -144,19 +172,6 @@ export function Dashboard() {
           <EmailAllButton members={displayMembers} />
           <button
             type="button"
-            onClick={() => {
-              const numbers = displayMembers.map((m) => m.MOBILENO).filter(Boolean).join(", ");
-              navigator.clipboard.writeText(numbers);
-              toast({ title: "Copied", description: `${displayMembers.filter((m) => m.MOBILENO).length} mobile numbers copied to clipboard` });
-            }}
-            disabled={displayMembers.length === 0}
-            className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-3 py-2 border border-input bg-background hover:bg-accent hover:text-accent-foreground transition-colors disabled:opacity-50"
-            title="Copy all mobile numbers from current view"
-          >
-            Copy Numbers
-          </button>
-          <button
-            type="button"
             onClick={() => setAddDialogOpen(true)}
             className="inline-flex items-center justify-center rounded-md text-sm font-medium h-8 w-8 bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
             title="Add new member"
@@ -175,38 +190,67 @@ export function Dashboard() {
         </div>
       </header>
 
+      {/* Tab bar */}
+      <div className="flex items-center gap-0 border-b bg-card px-4 md:px-6">
+        <button
+          type="button"
+          onClick={() => setActiveTab("members")}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "members" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"}`}
+        >
+          <Users className="h-4 w-4" />
+          Members
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("callLog")}
+          className={`inline-flex items-center gap-1.5 px-4 py-2 text-sm font-medium border-b-2 transition-colors ${activeTab === "callLog" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground hover:border-muted-foreground/30"}`}
+        >
+          <Phone className="h-4 w-4" />
+          Call Log
+        </button>
+      </div>
+
       {/* Zoomable content area */}
       <div className="flex flex-col flex-1 overflow-hidden" style={{ zoom: `${zoom}%` }}>
-        {/* Import progress + Birthday */}
-        <div className="px-6 pt-2 space-y-2">
-          <ImportProgress isImporting={isImporting} progress={progress} result={importResult} />
-          <BirthdayTray members={members} onScrollToMember={handleScrollToMember} />
-          {displayMembers.length !== members.length && (
-            <div className="flex items-center gap-2 text-sm">
-              <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
-                Showing {displayMembers.length} of {members.length} members
-              </span>
-            </div>
-          )}
-        </div>
+        {activeTab === "members" && (
+          <div className="px-6 pt-2 space-y-2">
+            <ImportProgress isImporting={isImporting} progress={progress} result={importResult} />
+            <BirthdayTray members={members} onScrollToMember={handleScrollToMember} />
+            {displayMembers.length !== members.length && (
+              <div className="flex items-center gap-2 text-sm">
+                <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 font-medium text-primary">
+                  Showing {displayMembers.length} of {members.length} members
+                </span>
+                <button
+                  type="button"
+                  onClick={() => { resetFilters(); setQuery(""); }}
+                  className="text-xs text-primary hover:text-primary/80 font-medium underline underline-offset-2 transition-colors"
+                >
+                  Clear all filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
-        {/* Main content area: filter panel + table */}
+        {/* Main content area: filter panel + content */}
         <div className="flex flex-1 overflow-hidden px-6 py-3 gap-4">
           {!filterOpen && (
             <button type="button" onClick={() => setFilterOpen(true)} className="shrink-0 inline-flex items-center justify-center rounded-md p-2 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors self-start" title="Show filters">
-              <PanelLeftOpen className="h-5 w-5" />
+              <Filter className="h-5 w-5" />
             </button>
           )}
 
           <aside className={`shrink-0 overflow-hidden ${filterOpen ? "w-56 lg:w-64" : "w-0"}`}>
             <div className="w-56 lg:w-64 h-full overflow-y-auto">
               <Card className="min-h-full">
-                <CardHeader className="pb-3 sticky top-0 z-10 bg-[hsl(350,100%,97%)] border-b border-border rounded-t-lg">
+                <CardHeader className="pb-3 sticky top-0 z-10 bg-[hsl(350,100%,97%)] border-b border-border rounded-t-lg cursor-pointer hover:bg-[hsl(350,100%,95%)] transition-colors" onClick={() => setFilterOpen(false)}>
                   <div className="flex items-center justify-between">
-                    <CardTitle className="text-base">Filters</CardTitle>
-                    <button type="button" onClick={() => setFilterOpen(false)} className="inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors" title="Hide filters">
-                      <PanelLeftClose className="h-4 w-4" />
-                    </button>
+                    <span className="flex items-center gap-1.5 text-base font-semibold">
+                      <Filter className="h-4 w-4" />
+                      Filters
+                    </span>
+                    <PanelLeftClose className="h-4 w-4 text-muted-foreground" />
                   </div>
                 </CardHeader>
                 <CardContent className="pb-6">
@@ -217,20 +261,28 @@ export function Dashboard() {
           </aside>
 
           <main className="flex-1 overflow-auto">
-            <Card className="h-full">
-              <CardContent className="p-0 h-full overflow-auto">
-                {loading ? (
-                  <div className="flex items-center justify-center h-full">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-                      <p className="text-sm text-muted-foreground">Loading members...</p>
+            {activeTab === "callLog" ? (
+              <Card className="h-full">
+                <CardContent className="p-0 h-full overflow-auto">
+                  <CallLogInline memberNames={memberNames} filteredMembernos={displayMembers.map(m => m.MEMBERNO)} />
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="h-full">
+                <CardContent className="p-0 h-full overflow-auto">
+                  {loading ? (
+                    <div className="flex items-center justify-center h-full">
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+                        <p className="text-sm text-muted-foreground">Loading members...</p>
+                      </div>
                     </div>
-                  </div>
-                ) : (
-                  <MemberTable members={displayMembers} onDelete={handleDelete} onUpdate={handleUpdate} scrollToMemberno={scrollToMemberno} scrollTrigger={scrollTrigger} />
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <MemberTable members={displayMembers} onDelete={handleDelete} onBulkDelete={handleBulkDelete} onUpdate={handleUpdate} scrollToMemberno={scrollToMemberno} scrollTrigger={scrollTrigger} lastCallMap={lastCallMap} onCallLogChange={refetchCallLogs} memberNames={memberNames} />
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </main>
         </div>
       </div>
@@ -249,8 +301,15 @@ export function Dashboard() {
 
       {/* Import Confirmation Dialog */}
       {pending && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={cancelImport}>
+          <div className="w-full max-w-md rounded-lg border bg-card p-6 shadow-lg relative" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={cancelImport}
+              className="absolute top-4 right-4 inline-flex items-center justify-center rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              title="Close"
+            >
+              <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
             <h3 className="text-lg font-semibold mb-2">Confirm Import</h3>
             <p className="text-sm text-muted-foreground mb-4">
               File: <span className="font-medium text-foreground">{pending.file.name}</span>

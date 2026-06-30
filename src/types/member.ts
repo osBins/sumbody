@@ -36,6 +36,8 @@ export interface FilterState {
   PCITY: string[];
   RSTATE: string[];
   PSTATE: string[];
+  RPIN: string;
+  PPIN: string;
   AQUALI: string[];
   MEMCAT: string[];
   REGIONNAME: string[];
@@ -51,4 +53,14 @@ export interface ImportResult {
   skipped: number;
   updated: number;
   errors: string[];
+}
+
+export interface CallLog {
+  id: number;
+  memberno: string;
+  call_date: string;
+  call_time: string;
+  call_type: string;
+  summary: string;
+  created_at: string;
 }

@@ -77,6 +77,12 @@ async fn get_db_pool(app: &AppHandle) -> Result<sqlx::SqlitePool, String> {
         .await
         .map_err(|e| format!("Failed to ensure members table exists: {}", e))?;
 
+    // Ensure the call_logs table exists (idempotent)
+    sqlx::query(crate::db::init::CREATE_CALL_LOGS_TABLE)
+        .execute(&pool)
+        .await
+        .map_err(|e| format!("Failed to ensure call_logs table exists: {}", e))?;
+
     Ok(pool)
 }
 

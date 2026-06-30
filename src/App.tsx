@@ -22,10 +22,16 @@ function App() {
       .then((update) => {
         if (update) {
           toast({
-            title: "Update available",
-            description: `Version ${update.version} is available. Restart the app after downloading.`,
+            title: "Updating...",
+            description: `Downloading v${update.version}. The app will update on next restart.`,
           });
-          update.downloadAndInstall();
+          update.downloadAndInstall().catch((err) => {
+            toast({
+              variant: "destructive",
+              title: "Update failed",
+              description: err instanceof Error ? err.message : "Download failed",
+            });
+          });
         }
       })
       .catch(() => {});

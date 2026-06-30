@@ -1,33 +1,38 @@
 import type { MemberRecord } from "@/types/member";
 
 export const SCHEMA_FIELDS: (keyof MemberRecord)[] = [
-  "MEMBERNO",
-  "MEMBERSHIPDATE",
-  "MEMCAT",
-  "SAL",
+  // Identity
   "NAME",
-  "DOB",
-  "AQUALI",
+  "SAL",
+  "MEMBERNO",
+  // Contact
+  "MOBILENO",
+  "TELEPHONE",
+  "EMAIL",
+  // Residential Address
+  "RCITY",
+  "RSTATE",
+  "RPIN",
   "RADD1",
   "RADD2",
   "RADD3",
   "RADD4",
-  "RCITY",
-  "RPIN",
-  "RSTATE",
+  // Professional Info
   "DESIGNATION",
   "ORGANISATION_NAME",
+  "PCITY",
+  "PSTATE",
+  "PPIN",
   "PADD1",
   "PADD2",
   "PADD3",
   "PADD4",
-  "PCITY",
-  "PPIN",
-  "PSTATE",
+  // Membership & Qualifications
+  "MEMCAT",
+  "MEMBERSHIPDATE",
+  "DOB",
+  "AQUALI",
   "REGIONNAME",
-  "TELEPHONE",
-  "MOBILENO",
-  "EMAIL",
   "TOTALDUES",
 ] as const;
 

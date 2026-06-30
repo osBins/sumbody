@@ -8,6 +8,8 @@ const initialFilterState: FilterState = {
   PCITY: [],
   RSTATE: [],
   PSTATE: [],
+  RPIN: "",
+  PPIN: "",
   AQUALI: [],
   MEMCAT: [],
   REGIONNAME: [],
@@ -37,6 +39,10 @@ export function applyFilters(
     if (filters.RSTATE.length > 0 && !filters.RSTATE.some((v) => v.toLowerCase() === m.RSTATE.toLowerCase()))
       return false;
     if (filters.PSTATE.length > 0 && !filters.PSTATE.some((v) => v.toLowerCase() === m.PSTATE.toLowerCase()))
+      return false;
+    if (filters.RPIN && !m.RPIN.includes(filters.RPIN))
+      return false;
+    if (filters.PPIN && !m.PPIN.includes(filters.PPIN))
       return false;
     if (filters.MEMCAT.length > 0 && !filters.MEMCAT.some((v) => v.toLowerCase() === m.MEMCAT.toLowerCase()))
       return false;
